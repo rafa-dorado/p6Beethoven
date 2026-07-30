@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zona 2: La Orquesta de Beethoven</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,"Times New Roman",serif;background:linear-gradient(150deg,#f4e4bc 0%,#ead9a0 50%,#e8d090 100%);min-height:100vh;padding:24px 16px;}
+:root{--ink:#451a03;--amber:#b45309;--amber-d:#78350f;--parch3:#fef9ec;--green:#15803d;}
+#game{max-width:900px;margin:0 auto;color:var(--ink);}
+h2{font-size:22px;font-weight:700;color:var(--amber-d);margin-bottom:6px}
+h3{font-size:18px;font-weight:700;color:var(--amber-d)}
+.subtitle{font-size:16px;color:var(--amber);font-style:italic;text-align:center;margin-bottom:14px}
+.badge{display:inline-block;background:var(--amber-d);color:#fef9ec;font-size:13px;font-weight:700;padding:3px 14px;border-radius:20px;letter-spacing:1px;margin-bottom:8px}
+.narrative{background:rgba(254,243,199,0.7);border-left:5px solid var(--amber);border:1px solid var(--amber);padding:14px 18px;border-radius:8px;margin-bottom:18px;font-style:italic;font-size:16px}
+.btn{font-family:Georgia,serif;background:var(--amber);color:#fef9ec;border:2px solid var(--amber-d);padding:12px 28px;font-size:17px;font-weight:700;border-radius:10px;cursor:pointer;transition:transform 0.1s,background 0.15s;}
+.btn:hover{background:var(--amber-d);transform:translateY(-2px)}
+.btn:active{transform:scale(0.97)}
+.btn:disabled{background:#c4a46a;cursor:not-allowed;transform:none}
+.card{background:var(--parch3);border:2px solid var(--amber);border-radius:10px;padding:14px;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.card:hover{transform:translateY(-4px);box-shadow:0 6px 18px rgba(120,53,15,0.25)}
+.card.selected{background:#fde68a;border-color:var(--amber-d);box-shadow:0 0 0 3px rgba(251,191,36,0.5);transform:translateY(-4px)}
+.card.done{opacity:0.4;cursor:default;transform:none;pointer-events:none}
+.phase-bar{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px}
+.phase-dot{width:38px;height:38px;border-radius:50%;border:2px solid var(--amber-d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;transition:all 0.3s;background:var(--parch3);color:var(--amber-d)}
+.phase-dot.active{background:var(--amber);color:#fef9ec;box-shadow:0 0 0 4px rgba(251,191,36,0.4)}
+.phase-dot.done{background:var(--amber-d);color:#fef9ec}
+.phase-line{width:24px;height:3px;background:var(--amber);opacity:0.3;border-radius:2px}
+.phase-line.done{opacity:1}
+.family-box{background:var(--parch3);border:3px solid var(--amber);border-radius:12px;padding:16px;min-height:140px;transition:all 0.2s;cursor:default;}
+.family-box.ready{cursor:pointer;border-style:dashed}
+.family-box.ready:hover{box-shadow:0 0 0 4px rgba(180,83,9,0.25);transform:scale(1.02)}
+.noise-card{border-radius:14px;padding:22px 16px;text-align:center;min-height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;transition:all 0.25s;user-select:none;}
+.noise-card.active-noise{background:#fff1f2;border:3px solid #dc2626;cursor:pointer;}
+.noise-card.active-noise:hover{transform:scale(1.04);box-shadow:0 0 16px rgba(220,38,38,0.4)}
+.noise-card.silenced{background:#f0fdf4;border:3px solid var(--green);pointer-events:none;}
+.noise-card.locked{background:#f5f0e8;border:2px dashed #d4a96a;pointer-events:none;opacity:0.55;}
+.modal-bg{background:rgba(69,10,10,0.7);border-radius:12px;display:flex;align-items:center;justify-content:center;padding:30px;min-height:500px}
+.modal{background:var(--parch3);border:4px solid #dc2626;border-radius:16px;padding:36px;text-align:center;max-width:480px;width:100%}
+.victory{text-align:center;padding:20px 0}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.panel{background:rgba(254,251,240,0.88);border:3px solid var(--amber);border-radius:16px;padding:28px;box-shadow:0 8px 48px rgba(120,53,15,0.18);}
+.wave-bar{width:6px;border-radius:3px;display:inline-block;vertical-align:middle;background:var(--amber);}
+.staff-lines{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden;}
+.staff-line{position:absolute;width:100%;height:1px;background:rgba(146,64,14,0.07);}
+@keyframes shake{0%,100%{transform:rotate(0)}20%{transform:rotate(-5deg)}40%{transform:rotate(5deg)}60%{transform:rotate(-4deg)}80%{transform:rotate(3deg)}}
+@keyframes bounce-y{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes flicker{0%,100%{opacity:1}50%{opacity:0.4;transform:scale(1.08)}}
+@keyframes knock{0%,100%{transform:rotate(0)}30%{transform:rotate(-8deg)}70%{transform:rotate(8deg)}}
+@keyframes spin-trophy{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.anim-shake{animation:shake 0.35s infinite}
+.anim-bounce{animation:bounce-y 0.6s infinite}
+.anim-flicker{animation:flicker 0.65s infinite}
+.anim-knock{animation:knock 0.5s infinite}
+</style>
+</head>
+<body>
+
+<div class="staff-lines" aria-hidden="true">
+  <div class="staff-line" style="top:8%"></div><div class="staff-line" style="top:18%"></div>
+  <div class="staff-line" style="top:28%"></div><div class="staff-line" style="top:38%"></div>
+  <div class="staff-line" style="top:48%"></div><div class="staff-line" style="top:58%"></div>
+  <div class="staff-line" style="top:68%"></div><div class="staff-line" style="top:78%"></div>
+  <div class="staff-line" style="top:88%"></div><div class="staff-line" style="top:98%"></div>
+</div>
+
+<div id="game" style="position:relative;z-index:1;">
+  <div style="text-align:center;margin-bottom:14px">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    <span style="font-size:24px;font-weight:700;color:#451a03;vertical-align:middle">Zona 2: La Orquesta de Beethoven</span>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:8px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    <div class="subtitle">Viena, 1824 — Kärntnertortheater</div>
+  </div>
+  <div class="phase-bar" id="phasebar"></div>
+  <div class="panel"><div id="content"></div></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+var phase=1,timerId=null;
+
+function ic(t){
+  var m={
+    music:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+    wind:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>',
+    volume:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>',
+    radio:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/></svg>',
+    mic:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
+    play:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
+    check:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    users:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    alert:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    voloff:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
+    flame:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+    arrow:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+    clock:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+  };
+  return m[t]||'';
+}
+
+/* ── Instrument audio ── */
+function mkCtx(){return new(window.AudioContext||window.webkitAudioContext)();}
+
+function playFlauta(){
+  var ctx=mkCtx(),t=ctx.currentTime;
+  var g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.35,t+0.18);g.gain.setValueAtTime(0.35,t+1.9);g.gain.linearRampToValueAtTime(0,t+2.9);g.connect(ctx.destination);
+  var osc=ctx.createOscillator();osc.type='sine';osc.frequency.value=880;
+  var lfo=ctx.createOscillator();lfo.frequency.value=5.5;var lg=ctx.createGain();lg.gain.value=8;
+  lfo.connect(lg);lg.connect(osc.frequency);osc.connect(g);
+  osc.start(t);lfo.start(t);osc.stop(t+3);lfo.stop(t+3);
+  setTimeout(function(){try{ctx.close();}catch(e){}},3500);
+}
+
+function playTrompeta(){
+  var ctx=mkCtx(),t=ctx.currentTime;
+  var filt=ctx.createBiquadFilter();filt.type='lowpass';filt.frequency.value=3200;filt.Q.value=4;filt.connect(ctx.destination);
+  var g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.5,t+0.04);g.gain.setValueAtTime(0.4,t+0.4);g.gain.linearRampToValueAtTime(0,t+2.4);g.connect(filt);
+  var o1=ctx.createOscillator();o1.type='sawtooth';o1.frequency.value=466;o1.connect(g);
+  var o2=ctx.createOscillator();o2.type='sawtooth';o2.frequency.value=699;var g2=ctx.createGain();g2.gain.value=0.18;o2.connect(g2);g2.connect(filt);
+  o1.start(t);o2.start(t);o1.stop(t+2.5);o2.stop(t+2.5);
+  setTimeout(function(){try{ctx.close();}catch(e){}},3000);
+}
+
+function playTimbales(){
+  var ctx=mkCtx(),t=ctx.currentTime;
+  var g=ctx.createGain();g.gain.setValueAtTime(0.7,t);g.gain.exponentialRampToValueAtTime(0.001,t+1.8);g.connect(ctx.destination);
+  var osc=ctx.createOscillator();osc.type='sine';osc.frequency.setValueAtTime(110,t);osc.frequency.exponentialRampToValueAtTime(48,t+1.6);osc.connect(g);osc.start(t);osc.stop(t+1.9);
+  var sr=ctx.sampleRate,len=Math.floor(sr*0.15),buf=ctx.createBuffer(1,len,sr),d=buf.getChannelData(0);
+  for(var i=0;i<len;i++)d[i]=(Math.random()*2-1);
+  var ns=ctx.createBufferSource();ns.buffer=buf;
+  var nf=ctx.createBiquadFilter();nf.type='bandpass';nf.frequency.value=200;nf.Q.value=0.8;
+  var ng=ctx.createGain();ng.gain.setValueAtTime(0.9,t);ng.gain.exponentialRampToValueAtTime(0.001,t+0.15);
+  ns.connect(nf);nf.connect(ng);ng.connect(ctx.destination);ns.start(t);
+  setTimeout(function(){try{ctx.close();}catch(e){}},2500);
+}
+var SYNTH={flauta:playFlauta,trompeta:playTrompeta,timbales:playTimbales};
+
+/* ── Noise sources ── */
+function makeNoiseBuf(ctx,secs){
+  var sr=ctx.sampleRate,n=Math.floor(sr*secs),buf=ctx.createBuffer(1,n,sr),d=buf.getChannelData(0);
+  for(var i=0;i<n;i++)d[i]=(Math.random()*2-1);return buf;
+}
+function startWindow(ctx,mv){
+  var g=ctx.createGain();g.gain.value=0.4;g.connect(mv);
+  var buf=makeNoiseBuf(ctx,3),src=ctx.createBufferSource();src.buffer=buf;src.loop=true;
+  var lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;
+  src.connect(lp);lp.connect(g);src.start();
+  return function(){var t=ctx.currentTime;g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+0.5);setTimeout(function(){try{src.stop();}catch(e){}},600);};
+}
+function startDoor(ctx,mv){
+  var g=ctx.createGain();g.gain.value=1;g.connect(mv);
+  var stopped=false,buf=makeNoiseBuf(ctx,2);
+  function bark(){
+    if(stopped)return;
+    var s1=ctx.createBufferSource();s1.buffer=buf;var f1=ctx.createBiquadFilter();f1.type='bandpass';f1.frequency.value=1050;f1.Q.value=2;
+    var e1=ctx.createGain(),t=ctx.currentTime;e1.gain.setValueAtTime(0,t);e1.gain.linearRampToValueAtTime(0.55,t+0.03);e1.gain.setValueAtTime(0.45,t+0.07);e1.gain.linearRampToValueAtTime(0,t+0.22);
+    s1.connect(f1);f1.connect(e1);e1.connect(g);s1.start(t);
+    setTimeout(function(){if(stopped)return;var s2=ctx.createBufferSource();s2.buffer=buf;var f2=ctx.createBiquadFilter();f2.type='bandpass';f2.frequency.value=880;f2.Q.value=1.8;var e2=ctx.createGain(),t2=ctx.currentTime;e2.gain.setValueAtTime(0,t2);e2.gain.linearRampToValueAtTime(0.4,t2+0.03);e2.gain.linearRampToValueAtTime(0,t2+0.18);s2.connect(f2);f2.connect(e2);e2.connect(g);s2.start(t2);},180);
+    setTimeout(function(){bark();},700+Math.random()*300);
+  }
+  bark();
+  return function(){stopped=true;var t=ctx.currentTime;g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+0.4);};
+}
+function startChimney(ctx,mv){
+  var g=ctx.createGain();g.gain.value=0.45;g.connect(mv);
+  var buf=makeNoiseBuf(ctx,4),src=ctx.createBufferSource();src.buffer=buf;src.loop=true;
+  var lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=280;src.connect(lp);lp.connect(g);src.start();
+  var osc=ctx.createOscillator();osc.type='sine';osc.frequency.value=340;var og=ctx.createGain();og.gain.value=0.12;
+  var lfo=ctx.createOscillator();lfo.frequency.value=0.4;var lg=ctx.createGain();lg.gain.value=60;
+  lfo.connect(lg);lg.connect(osc.frequency);osc.connect(og);og.connect(g);osc.start();lfo.start();
+  return function(){var t=ctx.currentTime;g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+0.7);setTimeout(function(){try{src.stop();osc.stop();lfo.stop();}catch(e){}},800);};
+}
+function startChair(ctx,mv){
+  var g=ctx.createGain();g.gain.value=1;g.connect(mv);
+  var stopped=false,buf=makeNoiseBuf(ctx,1);
+  function creak(){
+    if(stopped)return;
+    var src=ctx.createBufferSource();src.buffer=buf;var pk=ctx.createBiquadFilter();pk.type='peaking';pk.frequency.value=400;pk.Q.value=5;pk.gain.value=20;
+    var hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=200;var e=ctx.createGain(),t=ctx.currentTime;
+    e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(0.38,t+0.015);e.gain.setValueAtTime(0.3,t+0.04);e.gain.linearRampToValueAtTime(0,t+0.25);
+    src.connect(pk);pk.connect(hp);hp.connect(e);e.connect(g);src.start(t);
+    setTimeout(function(){creak();},380+Math.random()*250);
+  }
+  creak();
+  return function(){stopped=true;var t=ctx.currentTime;g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+0.3);};
+}
+
+var noiseCtx=null,stopFns={};
+function killAllNoise(){Object.keys(stopFns).forEach(function(k){try{stopFns[k]();}catch(e){}});stopFns={};setTimeout(function(){try{if(noiseCtx&&noiseCtx.state!=='closed')noiseCtx.close();}catch(e){}noiseCtx=null;},800);}
+function clearTimer(){if(timerId){clearInterval(timerId);timerId=null;}}
+
+function renderPhaseBar(){
+  var bar=document.getElementById('phasebar');if(!bar)return;var html='';
+  for(var i=0;i<4;i++){var p=i+1;var cls='phase-dot';if((typeof phase==='number'&&phase>p)||phase==='victory')cls+=' done';else if(phase===p)cls+=' active';var inner=((typeof phase==='number'&&phase>p)||phase==='victory')?ic('check'):(i+1);html+='<div class="'+cls+'">'+inner+'</div>';if(i<3){var lc='phase-line';if((typeof phase==='number'&&phase>p+1)||phase==='victory')lc+=' done';html+='<div class="'+lc+'"></div>';}}
+  bar.innerHTML=html;
+}
+
+function goError(){
+  clearTimer();killAllNoise();var c=document.getElementById('content');if(!c)return;
+  c.innerHTML='<div class="modal-bg"><div class="modal"><div style="font-size:52px;color:#dc2626;text-align:center;margin-bottom:12px;animation:shake 0.4s infinite">'+ic('alert')+'</div><h2 style="color:#991b1b;font-size:26px;margin-bottom:12px">¡No, no, no!</h2><p style="font-size:17px;font-style:italic;line-height:1.6;margin-bottom:20px">¡Ese acorde suena terrible! Beethoven ha roto la partitura por tu culpa. Debes volver a empezar desde la primera fase.</p><div style="height:2px;background:repeating-linear-gradient(90deg,var(--amber) 0,var(--amber) 8px,transparent 8px,transparent 14px);margin-bottom:20px"></div><button class="btn" onclick="resetAll()" style="background:#dc2626;border-color:#991b1b;width:100%;font-size:17px">Volver a Empezar desde la Fase 1</button></div></div>';
+}
+window.resetAll=function(){clearTimer();killAllNoise();phase=1;renderPhaseBar();renderPhase1();};
+
+/* ══ FASE 1 ══ */
+var INSTRS=[{id:'violin',name:'Violín',family:'Cuerda',icon:'music'},{id:'flauta',name:'Flauta',family:'Viento',icon:'wind'},{id:'timbales',name:'Timbales',family:'Percusión',icon:'volume'},{id:'trompeta',name:'Trompeta',family:'Viento',icon:'radio'},{id:'violonchelo',name:'Violonchelo',family:'Cuerda',icon:'music'},{id:'oboe',name:'Oboe',family:'Viento',icon:'mic'}];
+var FAMILIES=[{name:'Cuerda',border:'#92400e',bg:'#fffbeb',accent:'#b45309',quota:2,desc:'Vibración de cuerdas'},{name:'Viento',border:'#1e40af',bg:'#eff6ff',accent:'#3b82f6',quota:3,desc:'Columna de aire'},{name:'Percusión',border:'#9f1239',bg:'#fff1f2',accent:'#e11d48',quota:1,desc:'Golpe y vibración'}];
+var p1Sel=null,p1Cls={};
+function renderPhase1(){p1Sel=null;p1Cls={};var c=document.getElementById('content');if(!c)return;c.innerHTML='<div class="badge">FASE 1</div><h2>El Baúl de las Familias</h2><div class="subtitle">Haz clic en un instrumento y luego en su baúl correcto</div><div class="narrative">El gran maestro Beethoven ha revuelto todos los instrumentos en un acceso de furia creadora. ¡Necesita tu ayuda para ordenarlos! Haz clic primero en un instrumento y luego en el baúl correcto. Un solo error y la partitura vuelta trizas.</div><div class="grid-3" id="families" style="margin-bottom:16px"></div><div class="grid-3" id="instrs" style="gap:8px"></div><p id="p1hint" style="text-align:center;font-style:italic;color:var(--amber);margin-top:10px;font-size:16px"></p>';drawFams();drawInstrs();}
+function drawFams(){var el=document.getElementById('families');if(!el)return;var h='';FAMILIES.forEach(function(f){var cnt=Object.values(p1Cls).filter(function(x){return x===f.name;}).length;h+='<div class="family-box'+(p1Sel?' ready':'')+'" onclick="clickFam(\''+f.name+'\')" style="border-color:'+f.border+';background:'+f.bg+'"><h3 style="color:'+f.border+'">'+f.name+'</h3><p style="color:'+f.accent+';font-style:italic;font-size:14px;margin-bottom:8px">'+f.desc+'</p><div id="fi-'+f.name+'" style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px"></div><div style="font-size:13px;font-weight:700;color:'+f.accent+';margin-top:6px">'+cnt+'/'+f.quota+'</div></div>';});el.innerHTML=h;Object.entries(p1Cls).forEach(function(e){var instr=INSTRS.find(function(i){return i.id===e[0];});var fam=FAMILIES.find(function(f){return f.name===e[1];});var box=document.getElementById('fi-'+e[1]);if(box&&instr&&fam){var s=document.createElement('span');s.textContent=instr.name;s.style.cssText='background:'+fam.accent+'22;color:'+fam.border+';border:1px solid '+fam.accent+'55;padding:2px 8px;border-radius:6px;font-size:13px;font-weight:700';box.appendChild(s);}});}
+function drawInstrs(){var el=document.getElementById('instrs');if(!el)return;var h='';INSTRS.forEach(function(instr){var done=!!p1Cls[instr.id];var sel=p1Sel&&p1Sel.id===instr.id;h+='<div class="card'+(done?' done':sel?' selected':'')+'" onclick="clickInstr(\''+instr.id+'\')" style="'+(done?'pointer-events:none':'')+'"><div style="color:#92400e">'+ic(instr.icon)+'</div><div style="font-size:15px;font-weight:700;text-align:center">'+instr.name+'</div></div>';});el.innerHTML=h;}
+window.clickInstr=function(id){if(p1Cls[id])return;var instr=INSTRS.find(function(i){return i.id===id;});p1Sel=(p1Sel&&p1Sel.id===id)?null:instr;var h=document.getElementById('p1hint');if(h)h.textContent=p1Sel?'Ahora haz clic en el baúl correcto para "'+p1Sel.name+'"':'';drawFams();drawInstrs();};
+window.clickFam=function(fn){if(!p1Sel)return;if(p1Sel.family!==fn){goError();return;}p1Cls[p1Sel.id]=fn;p1Sel=null;drawFams();drawInstrs();var h=document.getElementById('p1hint');if(h)h.textContent='';if(Object.keys(p1Cls).length===6){setTimeout(function(){phase=2;renderPhaseBar();renderPhase2();},700);}};
+
+/* ══ FASE 2 ══ */
+var ROUNDS=[{timbre:'Un sonido cálido, dulce y aéreo... como si el aliento del bosque soplara a través de un tubo de madera dorada. La nota flota suave y etérea.',waveColor:'#60a5fa',correct:'flauta',opts:[{id:'flauta',name:'Flauta',icon:'wind'},{id:'trompeta',name:'Trompeta',icon:'radio'},{id:'timbales',name:'Timbales',icon:'volume'}]},{timbre:'Un sonido metálico, brillante y potente... como una fanfarria heroica que llena toda la sala con su llamada de gloria y triunfo.',waveColor:'#fbbf24',correct:'trompeta',opts:[{id:'violin',name:'Violín',icon:'music'},{id:'trompeta',name:'Trompeta',icon:'radio'},{id:'oboe',name:'Oboe',icon:'mic'}]},{timbre:'Un golpe profundo, grave y resonante... retumba como truenos en las tablas del gran escenario. La piel tensa vibra hasta los huesos.',waveColor:'#f87171',correct:'timbales',opts:[{id:'flauta',name:'Flauta',icon:'wind'},{id:'violonchelo',name:'Violonchelo',icon:'music'},{id:'timbales',name:'Timbales',icon:'volume'}]}];
+var p2Round=0,p2Playing=false,p2HasPlayed=false,p2Answered=false,p2WaveTimer=null;
+function renderPhase2(){p2Round=0;p2Playing=false;p2HasPlayed=false;p2Answered=false;drawRound2();}
+function drawRound2(){var r=ROUNDS[p2Round];var c=document.getElementById('content');if(!c)return;c.innerHTML='<div class="badge">FASE 2</div><h2>El Oído del Genio</h2><div class="subtitle">Ronda '+(p2Round+1)+' de 3 — Escucha y elige el instrumento correcto</div><div class="narrative">Beethoven, casi completamente sordo, recuerda cada timbre con una claridad sobrenatural. Pulsa el botón para escuchar y luego identifica el instrumento.</div><div style="text-align:center;margin-bottom:16px"><button class="btn" id="playBtn" onclick="p2Play()">'+ic('play')+' &nbsp;Escuchar Sonido</button></div><div id="waveform" style="display:flex;align-items:center;justify-content:center;gap:3px;height:64px;margin-bottom:14px;background:rgba(254,243,199,0.5);border-radius:10px;border:1px solid var(--amber);padding:0 12px"></div><div style="background:var(--parch3);border:2px solid var(--amber);border-radius:10px;padding:16px 20px;margin-bottom:18px;text-align:center"><p style="font-style:italic;font-size:17px">"'+r.timbre+'"</p></div><div class="grid-3" id="opts"></div><p id="p2hint" style="text-align:center;font-size:15px;color:var(--amber);font-style:italic;margin-top:10px">Pulsa primero el botón para escuchar</p>';drawWave2(r.waveColor,false);drawOpts2();}
+function drawWave2(color,active){var el=document.getElementById('waveform');if(!el)return;var h='';for(var i=0;i<24;i++){var ht=active?(Math.random()*44+8):6;h+='<div class="wave-bar" id="wb'+i+'" style="height:'+ht+'px;background:'+color+'"></div>';}el.innerHTML=h;}
+function drawOpts2(){var r=ROUNDS[p2Round];var el=document.getElementById('opts');if(!el)return;var h='';r.opts.forEach(function(opt){var ok=p2HasPlayed&&!p2Answered;h+='<div class="card" onclick="p2Answer(\''+opt.id+'\')" style="opacity:'+(ok?'1':'0.4')+';pointer-events:'+(ok?'auto':'none')+'"><div style="color:#92400e">'+ic(opt.icon)+'</div><div style="font-size:16px;font-weight:700">'+opt.name+'</div></div>';});el.innerHTML=h;}
+window.p2Play=function(){if(p2Playing)return;p2Playing=true;p2HasPlayed=true;var r=ROUNDS[p2Round];var btn=document.getElementById('playBtn');if(btn){btn.disabled=true;btn.innerHTML=ic('play')+' &nbsp;Escuchando...';}try{SYNTH[r.correct]();}catch(e){}if(p2WaveTimer)clearInterval(p2WaveTimer);p2WaveTimer=setInterval(function(){for(var i=0;i<24;i++){var b=document.getElementById('wb'+i);if(b)b.style.height=(Math.random()*48+8)+'px';}},130);setTimeout(function(){clearInterval(p2WaveTimer);for(var i=0;i<24;i++){var b=document.getElementById('wb'+i);if(b)b.style.height='6px';}p2Playing=false;var btn2=document.getElementById('playBtn');if(btn2){btn2.disabled=false;btn2.innerHTML=ic('play')+' &nbsp;Escuchar de Nuevo';}var hint=document.getElementById('p2hint');if(hint)hint.textContent='Ahora elige el instrumento correcto';drawOpts2();},3200);};
+window.p2Answer=function(id){if(!p2HasPlayed||p2Answered)return;var r=ROUNDS[p2Round];if(id!==r.correct){goError();return;}p2Answered=true;setTimeout(function(){if(p2Round<2){p2Round++;p2Playing=false;p2HasPlayed=false;p2Answered=false;drawRound2();}else{phase=3;renderPhaseBar();renderPhase3();}},600);};
+
+/* ══ FASE 3 ══ */
+var BASE_MUS=[{id:'v1',name:'Violín I',correct:true,icon:'music'},{id:'v2',name:'Violín II',correct:true,icon:'music'},{id:'vla',name:'Viola',correct:true,icon:'music'},{id:'vc',name:'Violonchelo',correct:true,icon:'music'},{id:'fl',name:'Flauta',correct:false,icon:'wind'},{id:'tr',name:'Trompeta',correct:false,icon:'radio'},{id:'tim',name:'Timbales',correct:false,icon:'volume'},{id:'ob',name:'Oboe',correct:false,icon:'mic'},{id:'cb',name:'Contrabajo',correct:false,icon:'music'},{id:'cl',name:'Clarinete',correct:false,icon:'wind'}];
+var p3Sel=new Set(),p3Mus=[];
+function shuffle(a){var b=a.slice();for(var i=b.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=b[i];b[i]=b[j];b[j]=t;}return b;}
+function renderPhase3(){p3Sel=new Set();p3Mus=shuffle(BASE_MUS);var c=document.getElementById('content');if(!c)return;c.innerHTML='<div class="badge">FASE 3</div><h2>Formar la Agrupación</h2><div class="subtitle">Selecciona exactamente los 4 músicos del Cuarteto de Cuerda</div><div class="narrative">Beethoven quiere ensayar su Cuarteto de Cuerda. Esta agrupación tiene exactamente 4 instrumentistas de cuerda. ¡La selección debe ser exacta!</div><div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px" id="p3dots"></div><div class="grid-5" id="musicians" style="margin-bottom:16px"></div><div style="text-align:center"><button class="btn" onclick="p3Submit()" style="background:var(--amber-d)">'+ic('users')+' &nbsp;Comenzar Ensayo</button></div>';drawDots3();drawMus3();}
+function drawDots3(){var el=document.getElementById('p3dots');if(!el)return;var h='';for(var i=0;i<4;i++){var f=p3Sel.size>i;h+='<div style="width:34px;height:34px;border-radius:50%;border:2px solid var(--amber-d);display:flex;align-items:center;justify-content:center;background:'+(f?'var(--amber-d)':'var(--parch3)')+';color:'+(f?'#fef9ec':'var(--amber-d)')+'">'+( f?ic('check'):'')+'</div>';}h+='<span style="font-size:16px;font-weight:700;color:var(--amber-d);margin-left:8px">'+p3Sel.size+' / 4</span>';el.innerHTML=h;}
+function drawMus3(){var el=document.getElementById('musicians');if(!el)return;var h='';p3Mus.forEach(function(m){var s=p3Sel.has(m.id);h+='<div class="card'+(s?' selected':'')+'" onclick="p3Toggle(\''+m.id+'\')" style="'+(s?'background:#fde68a;border-color:var(--amber-d)':'')+'"><div style="color:#92400e">'+ic(m.icon)+'</div><div style="font-size:13px;font-weight:700;text-align:center">'+m.name+'</div></div>';});el.innerHTML=h;}
+window.p3Toggle=function(id){if(p3Sel.has(id))p3Sel.delete(id);else p3Sel.add(id);drawDots3();drawMus3();};
+window.p3Submit=function(){var cids=BASE_MUS.filter(function(m){return m.correct;}).map(function(m){return m.id;});if(p3Sel.size!==4||!cids.every(function(id){return p3Sel.has(id);})){goError();return;}setTimeout(function(){phase=4;renderPhaseBar();renderPhase4();},500);};
+
+/* ══ FASE 4 ══ */
+var NOISES=[{id:'window',name:'Ventana',desc:'Tráfico y gritos de la calle',icon:'wind',anim:'anim-shake',col:'#dc2626'},{id:'door',name:'Puerta',desc:'Ladridos del perro del vecino',icon:'volume',anim:'anim-knock',col:'#ea580c'},{id:'chimney',name:'Chimenea',desc:'Viento que aúlla y silba',icon:'flame',anim:'anim-flicker',col:'#7c3aed'},{id:'chair',name:'Silla',desc:'Crujidos que no cesan',icon:'alert',anim:'anim-bounce',col:'#0369a1'}];
+var p4Sil={},p4Timer=15,p4Started=false,p4Done=false;
+
+function renderPhase4(){
+  p4Sil={};p4Timer=15;p4Started=false;p4Done=false;clearTimer();killAllNoise();
+  var c=document.getElementById('content');if(!c)return;
+  c.innerHTML='<div class="badge">FASE 4</div><h2>Silencio, se compone</h2><div class="subtitle">¡15 segundos para silenciar todos los ruidos!</div><div class="narrative">Beethoven necesita un silencio absoluto. Pulsa el botón, el caos comenzará, y haz clic rápido en cada fuente de ruido para silenciarla.</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="display:flex;gap:6px;align-items:center" id="p4dots"></div><div id="timerbox"><button class="btn" id="startBtn" onclick="p4Start()">'+ic('play')+' &nbsp;¡Empezar!</button></div></div><div class="grid-2" id="noises"></div><div id="sil-msg" style="margin-top:14px;text-align:center;font-size:16px;font-style:italic;color:var(--amber-d);min-height:24px"></div>';
+  drawDots4();drawNoises4();
+}
+function drawDots4(){var el=document.getElementById('p4dots');if(!el)return;var h='';NOISES.forEach(function(n){var s=!!p4Sil[n.id];h+='<div style="width:30px;height:30px;border-radius:50%;border:2px solid '+(s?'var(--green)':'var(--amber-d)')+';display:flex;align-items:center;justify-content:center;background:'+(s?'var(--green)':'var(--parch3)')+';color:'+(s?'#fff':'var(--amber-d)')+'">'+( s?ic('check'):'')+'</div>';});var cnt=NOISES.filter(function(n){return !!p4Sil[n.id];}).length;h+='<span style="font-size:15px;font-weight:700;color:var(--amber-d);margin-left:6px">'+cnt+'/4</span>';el.innerHTML=h;}
+function drawNoises4(){var el=document.getElementById('noises');if(!el)return;var h='';NOISES.forEach(function(n){var s=!!p4Sil[n.id];var clickable=p4Started&&!s&&!p4Done;var cls='noise-card '+(s?'silenced':(p4Started?'active-noise':'locked'));h+='<div class="'+cls+'" onclick="p4Silence(\''+n.id+'\')" style="pointer-events:'+(clickable?'auto':'none')+'"><div class="'+(p4Started&&!s?n.anim:'')+'" style="color:'+(s?'var(--green)':n.col)+'">'+ic(s?'voloff':n.icon)+'</div><div style="font-size:17px;font-weight:700;color:'+(s?'var(--green)':n.col)+'">'+( s?'Silenciado':n.name)+'</div><div style="font-size:14px;font-style:italic;color:'+(s?'#15803d':'#6b7280')+'">'+( s?'El silencio reina aquí':n.desc)+'</div></div>';});el.innerHTML=h;var msg=document.getElementById('sil-msg');if(msg&&p4Started){var cnt=NOISES.filter(function(n){return !!p4Sil[n.id];}).length;var msgs=['El caos reina en el apartamento...','Un ruido menos... sigue el caos.','Mitad del camino. El maestro respira.','¡Casi! Sólo falta uno...',''];msg.textContent=msgs[cnt]||'';}}
+window.p4Start=function(){
+  if(p4Started)return;p4Started=true;
+  var btn=document.getElementById('startBtn');if(btn)btn.style.display='none';
+  var tb=document.getElementById('timerbox');if(tb)tb.innerHTML='<div id="timerdisp" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--amber-d);border:2px solid #451a03;border-radius:10px;color:#fef9ec;font-size:21px;font-weight:700">'+ic('clock')+' &nbsp;<span id="tsec">15</span>s</div>';
+  try{
+    noiseCtx=new(window.AudioContext||window.webkitAudioContext)();
+    var master=noiseCtx.createGain();master.gain.value=1.0;master.connect(noiseCtx.destination);
+    stopFns['window']=startWindow(noiseCtx,master);
+    stopFns['door']=startDoor(noiseCtx,master);
+    stopFns['chimney']=startChimney(noiseCtx,master);
+    stopFns['chair']=startChair(noiseCtx,master);
+  }catch(e){console.error('AudioContext:',e);}
+  drawNoises4();
+  timerId=setInterval(function(){p4Timer--;var ts=document.getElementById('tsec');if(ts)ts.textContent=p4Timer;var td=document.getElementById('timerdisp');if(td&&p4Timer<=5)td.style.background='#dc2626';if(p4Timer<=0){clearTimer();if(!p4Done)goError();}},1000);
+};
+window.p4Silence=function(id){
+  if(!p4Started||p4Sil[id]||p4Done)return;
+  p4Sil[id]=true;if(stopFns[id]){try{stopFns[id]();}catch(e){}delete stopFns[id];}
+  drawDots4();drawNoises4();
+  var cnt=NOISES.filter(function(n){return !!p4Sil[n.id];}).length;
+  if(cnt===4){p4Done=true;clearTimer();setTimeout(function(){killAllNoise();phase='victory';renderPhaseBar();renderVictory();},900);}
+};
+
+/* ══ VICTORIA ══ */
+function renderVictory(){
+  var c=document.getElementById('content');if(!c)return;
+  c.innerHTML='<div class="victory"><div style="font-size:76px;text-align:center;margin-bottom:12px;display:inline-block;animation:spin-trophy 2s ease-in-out infinite">&#127942;</div><h2 style="font-size:28px;margin:12px 0;color:var(--amber-d)">¡Victoria Maestra!</h2><div style="background:var(--parch3);border:3px solid var(--amber);border-radius:12px;padding:20px 24px;margin:16px auto;max-width:520px"><p style="font-size:18px;font-style:italic;line-height:1.7">"¡La orquesta está lista y en absoluto silencio! El maestro alza la batuta. El público contiene el aliento. La historia de la música está a punto de cambiar para siempre."</p></div><div style="display:flex;justify-content:center;gap:16px;margin:16px 0">'+[1,2,3,4].map(function(p){return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:44px;height:44px;border-radius:50%;background:var(--amber-d);border:2px solid #451a03;display:flex;align-items:center;justify-content:center;color:#fef9ec">'+ic('check')+'</div><span style="font-size:13px;font-weight:700;color:var(--amber-d)">Fase '+p+'</span></div>';}).join('')+'</div><div style="background:var(--parch3);border:2px solid var(--amber);border-radius:10px;padding:16px;margin-top:16px;max-width:400px;margin-left:auto;margin-right:auto"><p style="font-size:15px;font-weight:700;color:var(--amber-d);margin-bottom:4px">Continúa en tu cuaderno con:</p><p style="font-size:18px;font-style:italic;color:var(--ink)">Zona 3: La Máquina del Tiempo</p></div></div>';
+}
+
+renderPhaseBar();
+renderPhase1();
+})();
+</script>
+</body>
+</html>
